@@ -1,0 +1,42 @@
+import { ContextualBanditConfig, decide } from "corvus";
+import { ItemReference, ContentZoneLookup } from "common";
+
+export class PromotionSearchOptions implements Search<string> {
+   search(context: GearLifecycleContext, searchString: string): ItemReference[] {
+       if (!searchString) {
+           return [];
+       }
+       const promos: Promotion[] = context.services.catalog.findByName("Promotion", searchString) as Promotion[];
+       return promos.reduce((allPromos: ItemReference[], promo: Promotion) => {
+           const promoItem = {
+               itemType: "Promotion",
+               id: promo.id,
+               label: promo.attributes["name"] != null ? promo.attributes["name"].value : promo.id,
+           } as ItemReference;
+           allPromos.push(promoItem);
+           return allPromos;
+       }, []);
+   }
+}
+
+export class EinsteinDecisionsTemplate implements CampaignTemplateComponent {
+   @lookupOptions(() => new ContentZoneLookup())
+   assetContentZoneOrTag: string;
+
+   @searchOptions((self) => new PromotionSearchOptions())
+   @title("Optional Fallback Promotion Selector")
+   @subtitle(`Search for a fallback promotion to return if there are no eligible promotions to return for the end user.
+   If no fallback is selected, no promotion will be returned. (NOTE: This field is case-sensitive.)`)
+   
+   fallbackArm: ItemReference;
+
+   datafield: string = "promos";
+   run(context: CampaignComponentContext) {
+       const banditConfig: ContextualBanditConfig = {
+            maxResults: 3,
+            contentZone: this.assetContentZoneOrTag,
+            fallbackArms: this.fallbackArm ? [this.fallbackArm.id] : []
+        } as ContextualBanditConfig;
+        return { [this.datafield]: decide(context, banditConfig, null) };
+    }
+}
