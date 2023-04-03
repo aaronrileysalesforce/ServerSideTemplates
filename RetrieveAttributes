@@ -1,0 +1,23 @@
+export class NewTemplate implements CampaignTemplateComponent {
+ 
+   @title("User Attributes To Retrieve")
+   @subtitle("Contents must be a Comma separated list")
+   userAttributes: string;
+ 
+   run(context:CampaignComponentContext) {
+      
+       let attrs = this.userAttributes.split(",")
+       let attributesToSend = {}
+       attrs.filter((value) => {
+           return context.user.attributes.hasOwnProperty(value);
+       }).map((attributeName) => {
+           attributesToSend[attributeName] = {
+               value: context.user.attributes[attributeName]
+           }
+       });
+ 
+       return {
+           attributes: attributesToSend
+       };
+   }
+}
